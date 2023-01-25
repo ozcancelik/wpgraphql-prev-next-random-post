@@ -21,11 +21,7 @@ register_graphql_field('Post', 'previousPost', [
         global $post;
         $post = get_post($post->ID, OBJECT);
         setup_postdata($post);
-        if (is_plugin_active('polylang/polylang.php')) {
-            $prev = get_adjacent_post(true, '', true, 'language');
-        } else {
-            $prev = get_adjacent_post(true, '', true);
-        }
+        $prev = get_adjacent_post(true, '', true, 'language');
         wp_reset_postdata();
         if (!$prev) {
             return null;
@@ -44,11 +40,7 @@ register_graphql_field('Post', 'nextPost', [
         global $post;
         $post = get_post($post->ID, OBJECT);
         setup_postdata($post);
-        if (is_plugin_active('polylang/polylang.php')) {
-            $next = get_adjacent_post(true, '', false, 'language');
-        } else {
-            $next = get_adjacent_post(true, '', false);
-        }
+        $next = get_adjacent_post(true, '', false, 'language');
         wp_reset_postdata();
         if (!$next) {
             return null;
@@ -59,26 +51,26 @@ register_graphql_field('Post', 'nextPost', [
 ]);
 
 // Random Post
-register_graphql_field('Post', 'randomPost', [
+
+register_graphql_field('RootQuery', 'randomPost', [
     'type' => 'Post',
-    'description' => __(
-        'Random Post'
-    ),
-    'resolve' => function (Post $post, array $args, AppContext $context) {
-        global $post;
-        $post = get_post($post->ID, OBJECT);
-        setup_postdata($post);
-        $random = get_posts([
+    'description' => __('Random Post by Language'),
+    'args' => [
+        'language' => [
+            'type' => 'LanguageCodeEnum',
+            'description' => __('Language'),
+        ],
+    ],
+    'resolve' => function ($root, $args, $context, $info) {
+        $args = [
             'post_type' => 'post',
             'orderby' => 'rand',
             'posts_per_page' => 1,
-
-        ]);
-        wp_reset_postdata();
-        if (!$random) {
-            return null;
-        }
-
-        return DataSource::resolve_post_object($random[0]->ID, $context);
+            'lang' => $args['language'],
+        ];
+        $query = new \WP_Query($args);
+        $posts = $query->get_posts();
+        $post = $posts[0];
+        return DataSource::resolve_post_object($post->ID, $context);
     },
 ]);
